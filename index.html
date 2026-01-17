@@ -3,104 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Art Pro - Grade Ativa</title>
+    <title>Pixel Art Pro - Master</title>
     <style>
-        :root { --bg: #111; --panel: #222; --accent: #4f46e5; }
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #6366f1; --success: #22c55e; }
         
         body {
             margin: 0; padding: 0; display: flex; flex-direction: column;
             height: 100vh; background: var(--bg); color: white;
-            font-family: sans-serif; overflow: hidden; touch-action: none;
+            font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none;
         }
 
-        header {
-            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
-            background: var(--panel); border-bottom: 2px solid #333;
-        }
+        /* --- SISTEMA DE TELAS --- */
+        .screen { display: none; height: 100%; flex-direction: column; }
+        .screen.active { display: flex; }
 
-        #viewport {
-            flex: 1; display: flex; align-items: center; justify-content: center;
-            position: relative; overflow: hidden;
-        }
+        /* --- MENU INICIAL --- */
+        #screen-menu { justify-content: center; align-items: center; text-align: center; gap: 20px; }
+        .logo { font-size: 3rem; font-weight: 900; letter-spacing: -2px; color: var(--accent); margin-bottom: 20px; }
+        .main-nav { display: flex; flex-direction: column; gap: 15px; width: 80%; max-width: 300px; }
 
-        /* Container que agrupa o desenho e a grade */
-        #canvas-stack {
-            position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            background: white;
-            line-height: 0;
-        }
+        /* --- GALERIA --- */
+        #screen-gallery { padding: 20px; overflow-y: auto; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .gallery-item { background: var(--panel); padding: 10px; border-radius: 12px; border: 1px solid #334155; }
+        .gallery-item img { width: 100%; image-rendering: pixelated; border-radius: 4px; background: white; }
 
+        /* --- EDITOR (Seu código original melhorado) --- */
+        header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; background: var(--panel); }
+        #viewport { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background: #000; }
+        #canvas-stack { position: relative; line-height: 0; }
         canvas { image-rendering: pixelated; display: block; }
+        #grid-layer { position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.2; }
 
-        /* Camada da Grade (Sobreposta) */
-        #grid-layer {
-            position: absolute; top: 0; left: 0;
-            pointer-events: none; /* Deixa o toque passar para o canvas debaixo */
-            opacity: 0.3; /* Ajuste aqui a visibilidade dos quadradinhos */
-        }
-
-        .bottom-panel {
-            background: var(--panel); padding: 15px;
-            border-radius: 20px 20px 0 0;
-        }
-
-        .color-bar {
-            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px;
-            scrollbar-width: none;
-        }
-        .color-bar::-webkit-scrollbar { display: none; }
-
-        .swatch {
-            min-width: 40px; height: 40px; border-radius: 8px;
-            border: 2px solid transparent;
-        }
+        .bottom-panel { background: var(--panel); padding: 15px; border-radius: 20px 20px 0 0; }
+        .color-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
+        .swatch { min-width: 35px; height: 35px; border-radius: 50%; border: 2px solid transparent; }
         .swatch.active { border-color: white; transform: scale(1.1); }
 
-        .tools {
-            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-        }
-
+        .tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        
+        /* --- BOTÕES GERAIS --- */
         button {
-            background: #333; border: none; color: white; padding: 12px 5px;
-            border-radius: 10px; font-size: 10px; font-weight: bold;
+            background: #334155; border: none; color: white; padding: 12px 5px;
+            border-radius: 10px; font-size: 11px; font-weight: bold; cursor: pointer;
         }
         button.active { background: var(--accent); }
-        .save { background: #16a34a; }
-
-        #colorPicker { width: 40px; height: 40px; border: none; background: none; flex-shrink: 0; }
+        .btn-large { padding: 18px; font-size: 16px; background: var(--panel); border: 1px solid var(--accent); }
+        .btn-primary { background: var(--accent); }
     </style>
 </head>
 <body>
 
-    <header>
-        <div style="font-weight: bold;">PIXEL GRID PRO</div>
-        <select id="res" style="background:#333; color:white; border:none; padding:5px; border-radius:5px;">
-            <option value="16">16x16</option>
-            <option value="32">32x32</option>
-            <option value="64">64x64</option>
-        </select>
-    </header>
-
-    <div id="viewport">
-        <div id="canvas-stack">
-            <canvas id="paintCanvas"></canvas>
-            <canvas id="grid-layer"></canvas>
+    <div id="screen-menu" class="screen active">
+        <div class="logo">PIXEL<br>PRO</div>
+        <div class="main-nav">
+            <button class="btn-large btn-primary" onclick="showScreen('screen-editor')">NOVO DESENHO</button>
+            <button class="btn-large" onclick="openGallery()">MINHA GALERIA</button>
         </div>
     </div>
 
-    <div class="bottom-panel">
-        <div class="color-bar" id="palette">
-            <input type="color" id="colorPicker" value="#4f46e5">
+    <div id="screen-editor" class="screen">
+        <header>
+            <button onclick="showScreen('screen-menu')">❮ VOLTAR</button>
+            <select id="res" style="background:#333; color:white; border:none; padding:5px; border-radius:5px;">
+                <option value="16">16x16</option>
+                <option value="32">32x32</option>
+                <option value="64">64x64</option>
+            </select>
+            <button id="saveBtn" style="background: var(--success);">SALVAR</button>
+        </header>
+
+        <div id="viewport">
+            <div id="canvas-stack">
+                <canvas id="paintCanvas"></canvas>
+                <canvas id="grid-layer"></canvas>
+            </div>
         </div>
 
-        <div class="tools">
-            <button id="undoBtn">VOLTAR</button>
-            <button id="drawBtn" class="active">PINCEL</button>
-            <button id="fillBtn">BALDE</button>
-            <button id="eraseBtn">APAGAR</button>
-            <button id="saveBtn" class="save">SALVAR</button>
+        <div class="bottom-panel">
+            <div class="color-bar" id="palette">
+                <input type="color" id="colorPicker" value="#6366f1" style="width:35px; height:35px; border:none; background:none;">
+            </div>
+            <div class="tools">
+                <button id="undoBtn">DESFAZER</button>
+                <button id="drawBtn" class="active">PINCEL</button>
+                <button id="fillBtn">BALDE</button>
+                <button id="eraseBtn">APAGAR</button>
+                <button onclick="clearCanvas()">LIMPAR</button>
+            </div>
         </div>
+    </div>
+
+    <div id="screen-gallery" class="screen">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <h2>Galeria</h2>
+            <button onclick="showScreen('screen-menu')">FECHAR</button>
+        </div>
+        <div id="gallery-list" class="gallery-grid">
+            </div>
     </div>
 
     <script>
@@ -111,39 +111,40 @@
         const colorPicker = document.getElementById('colorPicker');
 
         let gridSize = 16;
-        const internalSize = 512; // Resolução interna fixa para precisão
+        const internalSize = 512;
         let cellSize = internalSize / gridSize;
-        
         let history = [];
         let mode = 'draw';
         let isDrawing = false;
 
-        const colors = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#8b4513'];
+        // --- NAVEGAÇÃO ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'screen-editor') init();
+        }
 
+        // --- LÓGICA DO EDITOR ---
         function init() {
             gridSize = parseInt(document.getElementById('res').value);
             cellSize = internalSize / gridSize;
-
             canvas.width = canvas.height = internalSize;
             gridCanvas.width = gridCanvas.height = internalSize;
 
-            // Ajusta o tamanho visual no CSS para caber na tela
-            const displaySize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
+            const displaySize = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.5);
             canvas.style.width = canvas.style.height = displaySize + 'px';
             gridCanvas.style.width = gridCanvas.style.height = displaySize + 'px';
 
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            drawUI();
-            saveHistory();
+            drawGrid();
+            saveState();
         }
 
-        function drawUI() {
-            // Desenha a grade fixa no canvas superior
+        function drawGrid() {
             gctx.clearRect(0, 0, internalSize, internalSize);
-            gctx.strokeStyle = "#000000";
-            gctx.lineWidth = 1;
+            gctx.strokeStyle = "#ccc";
+            gctx.lineWidth = 0.5;
             for (let i = 0; i <= internalSize; i += cellSize) {
                 gctx.beginPath(); gctx.moveTo(i, 0); gctx.lineTo(i, internalSize); gctx.stroke();
                 gctx.beginPath(); gctx.moveTo(0, i); gctx.lineTo(internalSize, i); gctx.stroke();
@@ -152,9 +153,10 @@
 
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = (touch.clientX - rect.left) * (internalSize / rect.width);
-            const y = (touch.clientY - rect.top) * (internalSize / rect.height);
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = (clientX - rect.left) * (internalSize / rect.width);
+            const y = (clientY - rect.top) * (internalSize / rect.height);
             return { col: Math.floor(x / cellSize), row: Math.floor(y / cellSize) };
         }
 
@@ -165,41 +167,33 @@
             }
         }
 
-        // Algoritmo de Balde de Tinta (Flood Fill)
-        function floodFill(col, row, targetColor) {
-            const replacementColor = colorPicker.value;
-            if (targetColor === replacementColor.toLowerCase()) return;
-            
-            // Simplificação para este exemplo: Pintar o pixel clicado
-            paint(col, row);
+        function clearCanvas() {
+            if(confirm("Limpar desenho?")) init();
         }
 
-        canvas.addEventListener('touchstart', (e) => {
+        // --- EVENTOS DE TOQUE ---
+        const startDraw = (e) => {
             isDrawing = true;
             const p = getPos(e);
-            if (mode === 'fill') {
-                paint(p.col, p.row); // Balde básico
-            } else {
-                paint(p.col, p.row);
-            }
-            e.preventDefault();
-        }, {passive: false});
+            paint(p.col, p.row);
+            if(e.cancelable) e.preventDefault();
+        };
 
-        canvas.addEventListener('touchmove', (e) => {
-            if (isDrawing && mode !== 'fill') {
+        const moveDraw = (e) => {
+            if (isDrawing) {
                 const p = getPos(e);
                 paint(p.col, p.row);
             }
-            e.preventDefault();
-        }, {passive: false});
+            if(e.cancelable) e.preventDefault();
+        };
 
-        window.addEventListener('touchend', () => {
-            if (isDrawing) saveHistory();
-            isDrawing = false;
-        });
+        canvas.addEventListener('touchstart', startDraw);
+        canvas.addEventListener('touchmove', moveDraw);
+        window.addEventListener('touchend', () => { if(isDrawing) saveState(); isDrawing = false; });
 
-        function saveHistory() {
-            if (history.length > 20) history.shift();
+        // --- HISTÓRICO E SALVAMENTO ---
+        function saveState() {
+            if (history.length > 15) history.shift();
             history.push(canvas.toDataURL());
         }
 
@@ -208,43 +202,54 @@
                 history.pop();
                 let img = new Image();
                 img.src = history[history.length - 1];
-                img.onload = () => { ctx.drawImage(img, 0, 0); };
+                img.onload = () => ctx.drawImage(img, 0, 0);
             }
         };
 
-        // Botões
-        const btnGroup = [document.getElementById('drawBtn'), document.getElementById('fillBtn'), document.getElementById('eraseBtn')];
-        document.getElementById('drawBtn').onclick = function() { mode = 'draw'; setAct(this); };
-        document.getElementById('fillBtn').onclick = function() { mode = 'fill'; setAct(this); };
-        document.getElementById('eraseBtn').onclick = function() { mode = 'erase'; setAct(this); };
-        
-        function setAct(btn) {
-            btnGroup.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
         document.getElementById('saveBtn').onclick = () => {
-            const out = document.createElement('canvas');
-            out.width = 1024; out.height = 1024;
-            const oCtx = out.getContext('2d');
-            oCtx.imageSmoothingEnabled = false;
-            oCtx.drawImage(canvas, 0, 0, 1024, 1024);
-            const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = out.toDataURL(); a.click();
+            const dataUrl = canvas.toDataURL();
+            const saved = JSON.parse(localStorage.getItem('myPixels') || '[]');
+            saved.push({ id: Date.now(), img: dataUrl });
+            localStorage.setItem('myPixels', JSON.stringify(saved));
+            alert("Salvo na Galeria!");
+            showScreen('screen-menu');
         };
 
-        document.getElementById('res').onchange = init;
+        // --- GALERIA ---
+        function openGallery() {
+            const list = document.getElementById('gallery-list');
+            list.innerHTML = '';
+            const saved = JSON.parse(localStorage.getItem('myPixels') || '[]');
+            
+            if(saved.length === 0) {
+                list.innerHTML = '<p style="grid-column: 1/-1">Nenhum desenho salvo ainda.</p>';
+            }
 
-        // Gerar paleta
+            saved.reverse().forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'gallery-item';
+                div.innerHTML = `<img src="${item.img}">`;
+                list.appendChild(div);
+            });
+            showScreen('screen-gallery');
+        }
+
+        // --- PALETA ---
+        const colors = ['#000000', '#ffffff', '#ff4757', '#2ed573', '#1e90ff', '#eccc68', '#ff7f50', '#a29bfe'];
         const pal = document.getElementById('palette');
         colors.forEach(c => {
             const d = document.createElement('div');
             d.className = 'swatch';
             d.style.background = c;
-            d.onclick = () => { colorPicker.value = c; mode = 'draw'; setAct(document.getElementById('drawBtn')); };
+            d.onclick = () => { colorPicker.value = c; mode = 'draw'; };
             pal.appendChild(d);
         });
 
-        init();
+        // Ferramentas
+        document.getElementById('drawBtn').onclick = () => mode = 'draw';
+        document.getElementById('eraseBtn').onclick = () => mode = 'erase';
+        document.getElementById('res').onchange = init;
+
     </script>
 </body>
 </html>
