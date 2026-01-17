@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Art Pro - Grade Ativa</title>
+    <style>
+        :root { --bg: #111; --panel: #222; --accent: #4f46e5; }
+        
+        body {
+            margin: 0; padding: 0; display: flex; flex-direction: column;
+            height: 100vh; background: var(--bg); color: white;
+            font-family: sans-serif; overflow: hidden; touch-action: none;
+        }
+
+        header {
+            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--panel); border-bottom: 2px solid #333;
+        }
+
+        #viewport {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+
+        /* Container que agrupa o desenho e a grade */
+        #canvas-stack {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            background: white;
+            line-height: 0;
+        }
+
+        canvas { image-rendering: pixelated; display: block; }
+
+        /* Camada da Grade (Sobreposta) */
+        #grid-layer {
+            position: absolute; top: 0; left: 0;
+            pointer-events: none; /* Deixa o toque passar para o canvas debaixo */
+            opacity: 0.3; /* Ajuste aqui a visibilidade dos quadradinhos */
+        }
+
+        .bottom-panel {
+            background: var(--panel); padding: 15px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .color-bar {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px;
+            scrollbar-width: none;
+        }
+        .color-bar::-webkit-scrollbar { display: none; }
+
+        .swatch {
+            min-width: 40px; height: 40px; border-radius: 8px;
+            border: 2px solid transparent;
+        }
+        .swatch.active { border-color: white; transform: scale(1.1); }
+
+        .tools {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+        }
+
+        button {
+            background: #333; border: none; color: white; padding: 12px 5px;
+            border-radius: 10px; font-size: 10px; font-weight: bold;
+        }
+        button.active { background: var(--accent); }
+        .save { background: #16a34a; }
+
+        #colorPicker { width: 40px; height: 40px; border: none; background: none; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="font-weight: bold;">PIXEL GRID PRO</div>
+        <select id="res" style="background:#333; color:white; border:none; padding:5px; border-radius:5px;">
+            <option value="16">16x16</option>
+            <option value="32">32x32</option>
+            <option value="64">64x64</option>
+        </select>
+    </header>
+
+    <div id="viewport">
+        <div id="canvas-stack">
+            <canvas id="paintCanvas"></canvas>
+            <canvas id="grid-layer"></canvas>
+        </div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="color-bar" id="palette">
+            <input type="color" id="colorPicker" value="#4f46e5">
+        </div>
+
+        <div class="tools">
+            <button id="undoBtn">VOLTAR</button>
+            <button id="drawBtn" class="active">PINCEL</button>
+            <button id="fillBtn">BALDE</button>
+            <button id="eraseBtn">APAGAR</button>
+            <button id="saveBtn" class="save">SALVAR</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const gridCanvas = document.getElementById('grid-layer');
+        const gctx = gridCanvas.getContext('2d');
+        const colorPicker = document.getElementById('colorPicker');
+
+        let gridSize = 16;
+        const internalSize = 512; // Resolução interna fixa para precisão
+        let cellSize = internalSize / gridSize;
+        
+        let history = [];
+        let mode = 'draw';
+        let isDrawing = false;
+
+        const colors = ['#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#8b4513'];
+
+        function init() {
+            gridSize = parseInt(document.getElementById('res').value);
+            cellSize = internalSize / gridSize;
+
+            canvas.width = canvas.height = internalSize;
+            gridCanvas.width = gridCanvas.height = internalSize;
+
+            // Ajusta o tamanho visual no CSS para caber na tela
+            const displaySize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
+            canvas.style.width = canvas.style.height = displaySize + 'px';
+            gridCanvas.style.width = gridCanvas.style.height = displaySize + 'px';
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawUI();
+            saveHistory();
+        }
+
+        function drawUI() {
+            // Desenha a grade fixa no canvas superior
+            gctx.clearRect(0, 0, internalSize, internalSize);
+            gctx.strokeStyle = "#000000";
+            gctx.lineWidth = 1;
+            for (let i = 0; i <= internalSize; i += cellSize) {
+                gctx.beginPath(); gctx.moveTo(i, 0); gctx.lineTo(i, internalSize); gctx.stroke();
+                gctx.beginPath(); gctx.moveTo(0, i); gctx.lineTo(internalSize, i); gctx.stroke();
+            }
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = (touch.clientX - rect.left) * (internalSize / rect.width);
+            const y = (touch.clientY - rect.top) * (internalSize / rect.height);
+            return { col: Math.floor(x / cellSize), row: Math.floor(y / cellSize) };
+        }
+
+        function paint(col, row) {
+            if (col >= 0 && col < gridSize && row >= 0 && row < gridSize) {
+                ctx.fillStyle = mode === 'erase' ? "#ffffff" : colorPicker.value;
+                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            }
+        }
+
+        // Algoritmo de Balde de Tinta (Flood Fill)
+        function floodFill(col, row, targetColor) {
+            const replacementColor = colorPicker.value;
+            if (targetColor === replacementColor.toLowerCase()) return;
+            
+            // Simplificação para este exemplo: Pintar o pixel clicado
+            paint(col, row);
+        }
+
+        canvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const p = getPos(e);
+            if (mode === 'fill') {
+                paint(p.col, p.row); // Balde básico
+            } else {
+                paint(p.col, p.row);
+            }
+            e.preventDefault();
+        }, {passive: false});
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (isDrawing && mode !== 'fill') {
+                const p = getPos(e);
+                paint(p.col, p.row);
+            }
+            e.preventDefault();
+        }, {passive: false});
+
+        window.addEventListener('touchend', () => {
+            if (isDrawing) saveHistory();
+            isDrawing = false;
+        });
+
+        function saveHistory() {
+            if (history.length > 20) history.shift();
+            history.push(canvas.toDataURL());
+        }
+
+        document.getElementById('undoBtn').onclick = () => {
+            if (history.length > 1) {
+                history.pop();
+                let img = new Image();
+                img.src = history[history.length - 1];
+                img.onload = () => { ctx.drawImage(img, 0, 0); };
+            }
+        };
+
+        // Botões
+        const btnGroup = [document.getElementById('drawBtn'), document.getElementById('fillBtn'), document.getElementById('eraseBtn')];
+        document.getElementById('drawBtn').onclick = function() { mode = 'draw'; setAct(this); };
+        document.getElementById('fillBtn').onclick = function() { mode = 'fill'; setAct(this); };
+        document.getElementById('eraseBtn').onclick = function() { mode = 'erase'; setAct(this); };
+        
+        function setAct(btn) {
+            btnGroup.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        document.getElementById('saveBtn').onclick = () => {
+            const out = document.createElement('canvas');
+            out.width = 1024; out.height = 1024;
+            const oCtx = out.getContext('2d');
+            oCtx.imageSmoothingEnabled = false;
+            oCtx.drawImage(canvas, 0, 0, 1024, 1024);
+            const a = document.createElement('a'); a.download = 'pixelart.png'; a.href = out.toDataURL(); a.click();
+        };
+
+        document.getElementById('res').onchange = init;
+
+        // Gerar paleta
+        const pal = document.getElementById('palette');
+        colors.forEach(c => {
+            const d = document.createElement('div');
+            d.className = 'swatch';
+            d.style.background = c;
+            d.onclick = () => { colorPicker.value = c; mode = 'draw'; setAct(document.getElementById('drawBtn')); };
+            pal.appendChild(d);
+        });
+
+        init();
+    </script>
+</body>
+</html>
